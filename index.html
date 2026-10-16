@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sparx Maths</title>
+<style>
+  :root { color-scheme: light; --blue:#1769d2; --deep:#104da4; --pale:#eaf3ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font-family:Arial,Helvetica,sans-serif; background:linear-gradient(135deg,#eaf4ff,#d4e7ff); color:#18304b; display:flex; flex-direction:column; }
+  header { background:var(--blue); color:white; padding:20px 24px; box-shadow:0 3px 12px #0b438733; }
+  .brand { max-width:900px; margin:auto; display:flex; align-items:center; gap:12px; font-weight:800; font-size:25px; }
+  .logo { width:38px;height:38px;border-radius:11px;background:white;color:var(--blue);display:grid;place-items:center;font-size:23px;font-weight:900; }
+  main { width:min(700px,calc(100% - 28px)); margin:40px auto; flex:1; }
+  .stats { display:flex; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .pill { background:white; border:1px solid #c9def8; padding:10px 15px; border-radius:12px; font-size:14px; color:#31577f; }
+  .card { background:white; border:1px solid #c9def8; border-radius:22px; padding:clamp(22px,5vw,42px); box-shadow:0 14px 38px #245a9514; }
+  .eyebrow { color:var(--blue); text-transform:uppercase; letter-spacing:1.5px; font-size:12px; font-weight:800; }
+  h1 { font-size:clamp(25px,5vw,36px); margin:12px 0 8px; }
+  .sub { color:#647b95; line-height:1.5; margin:0 0 28px; }
+  #question { font-size:clamp(25px,5vw,34px); font-weight:750; margin:28px 0; text-align:center; }
+  .answer-row { display:flex; gap:10px; }
+  input { min-width:0; flex:1; padding:15px 16px; border:2px solid #d7e4f3; border-radius:12px; font-size:18px; outline:none; }
+  input:focus { border-color:var(--blue); box-shadow:0 0 0 3px #1769d21c; }
+  button { border:0; border-radius:12px; padding:14px 20px; background:var(--blue); color:white; font-size:16px; font-weight:750; cursor:pointer; }
+  button:hover { background:var(--deep); }
+  button:focus-visible { outline:3px solid #86b9ff; outline-offset:3px; }
+  #feedback { min-height:28px; margin:16px 0 0; font-weight:700; }
+  .good { color:#12834c; } .bad { color:#c04444; }
+  .progress { height:8px; background:#e4eefb; border-radius:99px; margin-top:24px; overflow:hidden; }
+  #bar { height:100%; width:0%; background:#3994ff; transition:width .25s; }
+  .bottom { text-align:center; color:#64809c; font-size:12px; margin:18px 0 30px; }
+  #snakePanel { position:fixed; right:14px; bottom:14px; width:230px; background:white; border:2px solid #1769d2; border-radius:16px; padding:12px; box-shadow:0 8px 28px #12385a33; z-index:5; display:none; }
+  #snakePanel h2 {font-size:16px; margin:0 0 7px; color:#1769d2;}
+  #snakeCanvas {display:block;width:100%;height:auto;background:#edf6ff;border-radius:8px;border:1px solid #c9def8; image-rendering:pixelated;}
+  .snake-controls {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .snake-controls button {font-size:12px;padding:7px 9px;}
+  #snakeScore {font-size:12px;color:#31577f;margin-left:auto;}
+  #scratchPanel { position:fixed; left:14px; bottom:14px; width:340px; background:white; border:2px solid #1769d2; border-radius:16px; padding:12px; box-shadow:0 8px 28px #12385a33; z-index:5; display:none; }
+  #scratchPanel h2 {font-size:16px; margin:0 0 7px; color:#1769d2; display:flex; justify-content:space-between; align-items:center;}
+  #scratchPanel h2 button {font-size:12px; padding:5px 9px;}
+  #scratchPanel iframe {display:block; width:100%; aspect-ratio:485/402; border:0; border-radius:8px;}
+  @media(max-width:480px) { #scratchPanel {width:220px; left:8px; bottom:8px;} }
+  @media(max-width:480px) { .answer-row { flex-direction:column; } .answer-row button { width:100%; } .stats {font-size:12px;flex-wrap:wrap;} #snakePanel {width:190px;right:8px;bottom:8px;} }
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">S</div><span>Sparx Maths</span></div></header>
+<main>
+  <div class="stats">
+    <div class="pill">Question <strong id="count">1</strong></div>
+    <div class="pill">Score <strong id="score">0</strong></div>
+    <div class="pill">Streak <strong id="streak">0</strong></div>
+    <div class="pill">XP <strong id="xp">0</strong></div>
+  </div>
+  <section class="card">
+    <div class="eyebrow">Maths practice</div>
+    <h1>Ready for the next one?</h1>
+    <p class="sub">Answer the question and a new one will appear. Type your answer below.</p>
+    <div id="question">Loading question…</div>
+    <form id="answerForm">
+      <div class="answer-row">
+        <input id="answer" type="number" step="any" autocomplete="off" placeholder="Your answer" aria-label="Your answer" required>
+        <button type="submit">Check answer</button>
+      </div>
+    </form>
+    <p id="feedback" aria-live="polite"></p>
+    <div class="progress"><div id="bar"></div></div>
+  </section>
+  <div class="bottom">Independent maths practice demo</div>
+</main>
+<aside id="snakePanel" aria-label="Mini Snake game">
+  <h2>Mini Snake</h2>
+  <canvas id="snakeCanvas" width="200" height="160" aria-label="Snake game board"></canvas>
+  <div class="snake-controls">
+    <button type="button" id="snakeStart">Start / Restart</button>
+    <button type="button" id="snakeUp">↑</button>
+    <button type="button" id="snakeLeft">←</button>
+    <button type="button" id="snakeDown">↓</button>
+    <button type="button" id="snakeRight">→</button>
+    <span id="snakeScore">Score 0</span>
+  </div>
+  <div style="font-size:11px;color:#64809c;margin-top:6px">Use arrow keys or buttons</div>
+</aside>
+<aside id="scratchPanel" aria-label="Scratch game">
+  <h2>Scratch Game <button type="button" id="scratchClose">Close</button></h2>
+  <iframe id="scratchFrame" allowtransparency="true" allowfullscreen></iframe>
+</aside>
+<script>
+const questionEl = document.getElementById('question');
+const answerEl = document.getElementById('answer');
+const feedbackEl = document.getElementById('feedback');
+const countEl = document.getElementById('count');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+const xpEl = document.getElementById('xp');
+const barEl = document.getElementById('bar');
+let currentAnswer = 0, count = 1, score = 0, streak = 0, xp = 0, answered = false;
+let snakeUnlocked = false;
+
+function makeQuestion() {
+  answered = false;
+  answerEl.value = '';
+  answerEl.disabled = false;
+  document.querySelector('button').disabled = false;
+  feedbackEl.textContent = '';
+  feedbackEl.className = '';
+  const type = Math.floor(Math.random() * 5);
+  let a, b, text;
+  if (type === 0) {
+    a = rand(2, 30); b = rand(2, 30); currentAnswer = a + b; text = `${a} + ${b} = ?`;
+  } else if (type === 1) {
+    a = rand(10, 50); b = rand(2, a); currentAnswer = a - b; text = `${a} − ${b} = ?`;
+  } else if (type === 2) {
+    a = rand(2, 12); b = rand(2, 12); currentAnswer = a * b; text = `${a} × ${b} = ?`;
+  } else if (type === 3) {
+    b = rand(2, 12); currentAnswer = rand(2, 12); a = b * currentAnswer; text = `${a} ÷ ${b} = ?`;
+  } else {
+    a = rand(2, 10); b = rand(2, 10); currentAnswer = a * b + rand(1, 10); text = `${a} × ${b} + ${currentAnswer - a*b} = ?`;
+  }
+  questionEl.textContent = text;
+  countEl.textContent = count;
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  xpEl.textContent = xp.toLocaleString();
+  barEl.style.width = `${Math.min(100, (count - 1) * 5)}%`;
+  answerEl.focus();
+}
+function rand(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
+document.getElementById('answerForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if (answered) return;
+  const rawValue = answerEl.value.trim();
+  if (rawValue === '') return;
+  const value = Number(rawValue);
+
+  if (rawValue === '9999') {
+    xp += 50000;
+    xpEl.textContent = xp.toLocaleString();
+    feedbackEl.textContent = 'Secret code unlocked! +50,000 XP';
+    feedbackEl.className = 'good';
+    answered = true;
+    answerEl.disabled = true;
+    document.querySelector('button').disabled = true;
+    setTimeout(() => { count++; makeQuestion(); }, 1100);
+    return;
+  }
+
+  if (rawValue === '7777') {
+    const frame = document.getElementById('scratchFrame');
+    if (!frame.src) frame.src = 'https://scratch.mit.edu/projects/1043149011/embed';
+    document.getElementById('scratchPanel').style.display = 'block';
+    feedbackEl.textContent = 'Scratch game unlocked in the corner!';
+    feedbackEl.className = 'good';
+    answered = true;
+    answerEl.disabled = true;
+    document.querySelector('button').disabled = true;
+    setTimeout(() => { count++; makeQuestion(); }, 1100);
+    return;
+  }
+
+  if (rawValue === '8888') {
+    snakeUnlocked = true;
+    document.getElementById('snakePanel').style.display = 'block';
+    feedbackEl.textContent = 'Mini Snake unlocked in the corner!';
+    feedbackEl.className = 'good';
+    answered = true;
+    answerEl.disabled = true;
+    document.querySelector('button').disabled = true;
+    setTimeout(() => { count++; makeQuestion(); }, 1100);
+    return;
+  }
+
+  answered = true;
+  answerEl.disabled = true;
+  document.querySelector('button').disabled = true;
+  if (Math.abs(value - currentAnswer) < 0.000001) {
+    score++; streak++; xp += 10;
+    xpEl.textContent = xp.toLocaleString();
+    feedbackEl.textContent = 'Correct! +10 XP. Nice work. Loading the next question…';
+    feedbackEl.className = 'good';
+  } else {
+    streak = 0;
+    feedbackEl.textContent = `Not quite. The answer was ${currentAnswer}. Next question coming up…`;
+    feedbackEl.className = 'bad';
+  }
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  setTimeout(() => { count++; makeQuestion(); }, 900);
+});
+makeQuestion();
+
+document.getElementById('scratchClose').addEventListener('click', () => {
+  document.getElementById('scratchPanel').style.display = 'none';
+  document.getElementById('scratchFrame').removeAttribute('src');
+});
+
+// Mini Snake game, unlocked by entering 8888 as an answer.
+(() => {
+  const canvas = document.getElementById('snakeCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreLabel = document.getElementById('snakeScore');
+  const cell = 10, cols = canvas.width / cell, rows = canvas.height / cell;
+  let snake, food, dir, nextDir, gameTimer = null, gameScore = 0, running = false;
+
+  function placeFood() {
+    do { food = {x: rand(0, cols - 1), y: rand(0, rows - 1)}; }
+    while (snake.some(p => p.x === food.x && p.y === food.y));
+  }
+  function draw() {
+    ctx.fillStyle = '#edf6ff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ff8a3d'; ctx.fillRect(food.x * cell, food.y * cell, cell - 1, cell - 1);
+    snake.forEach((p, i) => {
+      ctx.fillStyle = i === 0 ? '#104da4' : '#2783ed';
+      ctx.fillRect(p.x * cell, p.y * cell, cell - 1, cell - 1);
+    });
+    if (!running) {
+      ctx.fillStyle = '#18304b'; ctx.font = '12px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('Press Start to play', canvas.width / 2, canvas.height / 2);
+    }
+  }
+  function start() {
+    clearInterval(gameTimer);
+    snake = [{x:10,y:8},{x:9,y:8},{x:8,y:8}];
+    dir = {x:1,y:0}; nextDir = {x:1,y:0}; gameScore = 0; running = true;
+    scoreLabel.textContent = 'Score 0';
+    placeFood(); draw();
+    gameTimer = setInterval(tick, 115);
+  }
+  function setDirection(x, y) {
+    if (!running || (x === -dir.x && y === -dir.y)) return;
+    nextDir = {x,y};
+  }
+  function tick() {
+    dir = nextDir;
+    const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+    if (head.x < 0 || head.y < 0 || head.x >= cols || head.y >= rows ||
+        snake.some((p, i) => i > 0 && p.x === head.x && p.y === head.y)) {
+      running = false; clearInterval(gameTimer); draw(); return;
+    }
+    snake.unshift(head);
+    if (head.x === food.x && head.y === food.y) {
+      gameScore++; scoreLabel.textContent = 'Score ' + gameScore; placeFood();
+    } else snake.pop();
+    draw();
+  }
+  document.getElementById('snakeStart').addEventListener('click', start);
+  document.getElementById('snakeUp').addEventListener('click', () => setDirection(0,-1));
+  document.getElementById('snakeDown').addEventListener('click', () => setDirection(0,1));
+  document.getElementById('snakeLeft').addEventListener('click', () => setDirection(-1,0));
+  document.getElementById('snakeRight').addEventListener('click', () => setDirection(1,0));
+  document.addEventListener('keydown', e => {
+    if (document.getElementById('snakePanel').style.display !== 'block') return;
+    const keys = {ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]};
+    if (keys[e.key]) { e.preventDefault(); setDirection(...keys[e.key]); }
+  });
+  draw();
+})();
+</script>
+</body>
+</html>
